@@ -39,8 +39,9 @@
 
 
         <footer>
-            <p>&copy; {{ moment(now).format('YYYY') }} Chi-Square Web App. Built with Flask, NumPy, SciPy, Plotly.</p>
-        </footer>
+          {# Display the current year provided by the context processor #}
+          <p>© {{ current_year }} Chi-Square Web App. Built with Flask, NumPy, SciPy, Plotly.</p>
+      </footer>
     </div>
 
     {% block scripts %}{% endblock %}

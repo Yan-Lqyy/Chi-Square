@@ -137,8 +137,7 @@ def plot_chi_square_curve(
     # Configure interactivity features
     fig.update_layout(
         hoverlabel=dict(bgcolor="white", font_size=12, font_family="var(--font-family)"), # Match app font
-        modebar_activecolor=var('--secondary-color'), # Customize hover color
-        # Additional config options can be passed to fig.to_html via config={...}
+        modebar_activecolor='#007bff', # Use the actual hex code
         # e.g., config={'displayModeBar': True}
     )
 

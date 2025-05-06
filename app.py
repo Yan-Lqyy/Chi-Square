@@ -6,6 +6,7 @@ import numpy as np
 # Need scipy.stats here for critical value lookup route
 from scipy import stats
 import logging # Import logging module
+import datetime # Import the datetime module
 
 # Import the chi_square_math package
 try:
@@ -52,10 +53,17 @@ app = Flask(__name__)
 
 # IMPORTANT: Set a secret key for Flask sessions (used for flashing messages)
 # Use environment variable in production, generate a secure random key
-app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'a_very_secret_key_you_should_change_in_production_12345')
+app.config['SECRET_KEY'] = os.urandom(24).hex() # Generate a random key for session management
 
 # --- Add enumerate to Jinja2 globals for loops in templates ---
 app.jinja_env.globals['enumerate'] = enumerate
+
+# --- Context processor to add current year to all templates ---
+@app.context_processor
+def inject_current_year():
+    """Injects the current year into all templates."""
+    return {'current_year': datetime.datetime.now().year}
+# -----------------------------------------------------------
 
 # --- Helper Functions ---
 # Move parsing functions here as they are part of the Flask app's request handling
