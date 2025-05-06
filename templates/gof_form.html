@@ -1,31 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Goodness of Fit Test{% endblock %}
+{% block page_title %}Chi-Square Goodness of Fit Test{% endblock %}
 
 {% block content %}
-<p>Enter observed frequencies and either expected frequencies or probabilities.</p>
+<p>Enter the observed frequencies for each category. Optionally, provide the expected frequencies or expected probabilities based on your null hypothesis. Select your desired significance level (alpha).</p>
+
 <form method="post">
     <div>
-        <label for="observed_freqs">Observed Frequencies (comma-separated integers):</label>
+        <label for="observed_freqs">Observed Frequencies (comma-separated positive integers):</label>
         <input type="text" id="observed_freqs" name="observed_freqs" required
                value="{{ form_data.observed_freqs if form_data else '' }}"
                placeholder="e.g., 50, 30, 20">
+        <small>Enter the actual counts observed in each category.</small>
     </div>
 
-    <p><strong>Optional:</strong> Provide one of the following:</p>
+    <p><strong>Expected Values (Choose ONE, or leave blank for uniform distribution):</strong></p>
     <div>
-        <label for="expected_freqs">Expected Frequencies (comma-separated numbers, must sum to observed total):</label>
+        <label for="expected_freqs">Expected Frequencies (comma-separated numbers):</label>
         <input type="text" id="expected_freqs" name="expected_freqs"
                value="{{ form_data.expected_freqs if form_data else '' }}"
                placeholder="e.g., 45.5, 34.1, 20.4">
-        <small>If left blank and probabilities aren't given, a uniform distribution is assumed.</small>
+        <small>The counts you would expect in each category if your hypothesis is true. If the sum differs from observed total, values will be scaled.</small>
     </div>
     <div>
         <label for="expected_probs">Expected Probabilities (comma-separated numbers, must sum to 1.0):</label>
         <input type="text" id="expected_probs" name="expected_probs"
                value="{{ form_data.expected_probs if form_data else '' }}"
                placeholder="e.g., 0.5, 0.3, 0.2">
+        <small>The proportion or probability expected in each category if your hypothesis is true.</small>
     </div>
+
+     <div>
+        <label for="alpha">Significance Level (Alpha):</label>
+        <select id="alpha" name="alpha">
+            <option value="0.1" {% if form_data and form_data.alpha == '0.1' %}selected{% endif %}>0.10 (10%)</option>
+            <option value="0.05" {% if not form_data or form_data.alpha == '0.05' %}selected{% endif %}>0.05 (5%, Standard)</option>
+            <option value="0.025" {% if form_data and form_data.alpha == '0.025' %}selected{% endif %}>0.025 (2.5%)</option>
+            <option value="0.01" {% if form_data and form_data.alpha == '0.01' %}selected{% endif %}>0.01 (1%)</option>
+            <option value="0.001" {% if form_data and form_data.alpha == '0.001' %}selected{% endif %}>0.001 (0.1%)</option>
+        </select>
+        <small>The probability threshold (p < alpha) for declaring the result statistically significant.</small>
+    </div>
+
 
     <button type="submit">Calculate Goodness of Fit</button>
 </form>
+
+<section>
+    <h3>Need Help?</h3>
+    <p><a href="{{ url_for('learn_more') }}#types">Learn more about the Chi-Square Goodness of Fit Test.</a></p>
+    <p><a href="{{ url_for('learn_more') }}#assumptions">Understand the assumptions for Chi-Square tests.</a></p>
+</section>
+
 {% endblock %}

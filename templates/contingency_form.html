@@ -1,29 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Contingency Table Test{% endblock %}
+{% block page_title %}Chi-Square Test for Contingency Tables{% endblock %}
 
 {% block content %}
-<p>Enter the contingency table data. Separate columns with commas and rows with newlines or semicolons.</p>
+<p>Enter the observed frequencies in your contingency table. Each row should represent a category of one variable, and each column a category of the other. Separate values in a row with commas (e.g., <code>10,20,30</code>). Separate rows with newlines or semicolons (e.g., <code>10,20; 5,15</code>).</p>
+
 <form method="post">
     <div>
         <label for="contingency_table">Observed Frequencies Table:</label>
-        <textarea id="contingency_table" name="contingency_table" rows="5" required
-                  placeholder="e.g.,&#10;25, 15, 10&#10;30, 20, 5&#10;or&#10;25,15,10; 30,20,5">{{ form_data.contingency_table if form_data else '' }}</textarea>
-        <small>Example: A 2x3 table with rows separated by newlines.</small>
+        <textarea id="contingency_table" name="contingency_table" rows="6" required
+                  placeholder="e.g., (Rows: Variable A, Columns: Variable B)&#10;25, 15, 10&#10;30, 20, 5&#10;&#10;or using semicolon:&#10;25,15,10; 30,20,5">{{ form_data.contingency_table if form_data else '' }}</textarea>
+        <small>Input a table with at least 2 rows and 2 columns.</small>
     </div>
     <div>
-        <label for="test_type">Test Interpretation Hint (optional):</label>
+        <label for="test_type">Interpretation Context (optional):</label>
         <select id="test_type" name="test_type">
-            <option value="Independence" {% if form_data and form_data.test_type == 'Independence' %}selected{% endif %}>Test of Independence (Association)</option>
-            <option value="Homogeneity" {% if form_data and form_data.test_type == 'Homogeneity' %}selected{% endif %}>Test of Homogeneity (Comparing Distributions)</option>
+            <option value="Independence" {% if not form_data or form_data.test_type == 'Independence' %}selected{% endif %}>Test of Independence (Are variables associated?)</option>
+            <option value="Homogeneity" {% if form_data and form_data.test_type == 'Homogeneity' %}selected{% endif %}>Test of Homogeneity (Are distributions same across groups?)</option>
         </select>
+        <small>This hint affects the wording of the interpretation.</small>
+    </div>
+     <div>
+        <label for="alpha">Significance Level (Alpha):</label>
+        <select id="alpha" name="alpha">
+            <option value="0.1" {% if form_data and form_data.alpha == '0.1' %}selected{% endif %}>0.10 (10%)</option>
+            <option value="0.05" {% if not form_data or form_data.alpha == '0.05' %}selected{% endif %}>0.05 (5%, Standard)</option>
+            <option value="0.025" {% if form_data and form_data.alpha == '0.025' %}selected{% endif %}>0.025 (2.5%)</option>
+            <option value="0.01" {% if form_data and form_data.alpha == '0.01' %}selected{% endif %}>0.01 (1%)</option>
+            <option value="0.001" {% if form_data and form_data.alpha == '0.001' %}selected{% endif %}>0.001 (0.1%)</option>
+        </select>
+         <small>The probability threshold (p < alpha) for declaring the result statistically significant.</small>
     </div>
     <div>
         <label>
             <input type="checkbox" name="yates_correction" value="true" {% if form_data and form_data.yates_correction %}checked{% endif %}>
-            Apply Yates' Continuity Correction (recommended only for 2x2 tables)
+            Apply Yates' Continuity Correction
         </label>
+        <small>Recommended only for 2x2 tables when any expected cell count is less than 10. It adjusts the Chi-Square statistic to better approximate the continuous distribution.</small>
     </div>
 
     <button type="submit">Calculate Contingency Test</button>
 </form>
+
+<section>
+    <h3>Need Help?</h3>
+    <p><a href="{{ url_for('learn_more') }}#types">Learn more about the Chi-Square Test of Independence and Homogeneity.</a></p>
+    <p><a href="{{ url_for('learn_more') }}#assumptions">Understand the assumptions for Chi-Square tests.</a></p>
+</section>
+
 {% endblock %}

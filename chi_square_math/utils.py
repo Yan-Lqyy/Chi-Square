@@ -23,20 +23,28 @@ def safe_to_ndarray(data: Union[List, Tuple, np.ndarray], dtype=np.float64) -> n
     if not isinstance(data, (list, tuple, np.ndarray)):
         raise TypeError(f"Input data must be a list, tuple, or numpy array, got {type(data)}")
 
+    # Handle empty input gracefully before converting to array
+    if not data or (isinstance(data, (list, tuple)) and all(not item for item in data)):
+         raise ValueError("Input data cannot be empty or contain only empty items.")
+
     try:
         arr = np.array(data, dtype=dtype)
     except ValueError as e:
         raise ValueError(f"Could not convert data to numeric array. Check for non-numeric values. Original error: {e}") from e
+    except Exception as e:
+        # Catch other potential numpy conversion issues
+         raise ValueError(f"An error occurred during data conversion: {e}") from e
+
 
     if arr.size == 0:
-        raise ValueError("Input data cannot be empty.")
+        raise ValueError("Input data resulted in an empty array.")
 
     if np.any(arr < 0):
         raise ValueError("Input data contains negative values. Frequencies must be non-negative.")
 
-    # Check for NaNs or Infs introduced during conversion
+    # Check for NaNs or Infs introduced during conversion (e.g., from non-finite input)
     if np.any(np.isnan(arr)) or np.any(np.isinf(arr)):
-        raise ValueError("Input data contains NaN or Infinite values after conversion.")
+        raise ValueError("Input data contains NaN or Infinite values after conversion. Check input format.")
 
     return arr
 
@@ -52,16 +60,31 @@ def check_expected_frequencies(expected: np.ndarray, threshold: float) -> List[s
         A list of warning messages, empty if all frequencies meet the threshold.
     """
     warnings = []
-    if np.any(expected < threshold):
-        count_below = np.sum(expected < threshold)
+    if expected is None or expected.size == 0:
+        # This case should ideally not happen if analysis ran, but defensive check
+        return warnings
+
+    low_expected_mask = expected < threshold
+    if np.any(low_expected_mask):
+        count_below = np.sum(low_expected_mask)
         total_cells = expected.size
         percentage_below = (count_below / total_cells) * 100
-        warnings.append(
-            f"Assumption Warning: {count_below} out of {total_cells} ({percentage_below:.1f}%) "
-            f"expected frequencies are below the recommended threshold of {threshold}. "
-            "Chi-Square results may be inaccurate."
+
+        warning_message = (
+            f"{count_below} out of {total_cells} ({percentage_below:.1f}%) expected frequencies "
+            f"are below the recommended threshold of {threshold}."
         )
-        # Suggest Fisher's Exact Test for 2x2 tables
-        if expected.ndim == 2 and expected.shape == (2, 2):
-             warnings.append("Consider using Fisher's Exact Test for 2x2 tables with low expected frequencies.")
+
+        # Provide more specific guidance based on context/test type
+        if expected.ndim == 1: # GoF test
+             warning_message += " This may make Chi-Square results inaccurate, especially if many categories have low expected counts."
+        elif expected.ndim == 2: # Contingency table test
+             warning_message += " This violates a common assumption for the Chi-Square test."
+             if expected.shape == (2, 2):
+                 warning_message += " Consider using Fisher's Exact Test for 2x2 tables with low expected frequencies."
+             else:
+                  warning_message += " Results may be unreliable. Consider combining categories if theoretically sound, or using alternative tests (e.g., exact tests if computationally feasible)."
+
+
+        warnings.append(warning_message)
     return warnings

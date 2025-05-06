@@ -3,9 +3,20 @@
 {% block page_title %}Chi-Square Inference Application{% endblock %}
 
 {% block content %}
-<p>Select a Chi-Square test to perform:</p>
-<ul>
-    <li><a href="{{ url_for('goodness_of_fit_view') }}">Chi-Square Goodness of Fit Test</a>: Test if observed frequencies match expected frequencies for a single categorical variable.</li>
-    <li><a href="{{ url_for('contingency_test_view') }}">Chi-Square Test for Contingency Tables</a>: Test for independence or homogeneity between two categorical variables using a contingency table.</li>
-</ul>
+<section>
+    <h2>About This Application</h2>
+    <p>This web application provides tools for performing common Chi-Square (χ²) statistical inference tests. It allows you to input your observed categorical data and perform the necessary calculations, including generating visualizations of the Chi-Square distribution and calculating effect sizes and post-hoc residuals where appropriate.</p>
+    <p>Use the navigation above to select the test you need or explore the resources.</p>
+</section>
+
+<section>
+     <h2>Available Tools</h2>
+     <ul>
+         <li><a href="{{ url_for('goodness_of_fit_view') }}"><strong>Chi-Square Goodness of Fit Test</strong></a>: Test if the observed frequency distribution of a single categorical variable differs significantly from a hypothesized expected distribution.</li>
+         <li><a href="{{ url_for('contingency_test_view') }}"><strong>Chi-Square Test for Contingency Tables</strong></a>: Test for a statistically significant association between two categorical variables (Test of Independence) or compare the distribution of a variable across different groups (Test of Homogeneity).</li>
+         <li><a href="{{ url_for('critical_value_lookup') }}"><strong>Chi-Square Critical Value Lookup</strong></a>: Find the critical value from the Chi-Square distribution for a given degrees of freedom (df) and significance level (alpha).</li>
+         <li><a href="{{ url_for('learn_more') }}"><strong>Learn More About Chi-Square Tests</strong></a>: Understand the theory, assumptions, and interpretation behind these tests.</li>
+     </ul>
+</section>
+
 {% endblock %}

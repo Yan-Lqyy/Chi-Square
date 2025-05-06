@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Chi-Square Critical Value Lookup{% endblock %}
+{% block page_title %}Chi-Square Critical Value Lookup{% endblock %}
+
+{% block content %}
+<p>Find the critical value from the Chi-Square distribution for a given degrees of freedom (df) and significance level (alpha). This critical value is the threshold that your calculated test statistic must exceed to be considered statistically significant at the chosen alpha level in a one-tailed test (which Chi-Square tests typically are, looking at the upper tail).</p>
+
+<form method="post">
+    <div>
+        <label for="df">Degrees of Freedom (df):</label>
+        <input type="number" id="df" name="df" required min="1" step="1"
+               value="{{ form_data.df if form_data else '' }}"
+               placeholder="e.g., 3">
+        <small>Must be a positive integer. For contingency tables: (Rows - 1) * (Cols - 1). For Goodness-of-Fit: Categories - 1.</small>
+    </div>
+     <div>
+        <label for="alpha">Significance Level (Alpha):</label>
+        <select id="alpha" name="alpha">
+            <option value="0.1" {% if form_data and form_data.alpha == '0.1' %}selected{% endif %}>0.10 (10%)</option>
+            <option value="0.05" {% if not form_data or form_data.alpha == '0.05' %}selected{% endif %}>0.05 (5%, Standard)</option>
+            <option value="0.025" {% if form_data and form_data.alpha == '0.025' %}selected{% endif %}>0.025 (2.5%)</option>
+            <option value="0.01" {% if form_data and form_data.alpha == '0.01' %}selected{% endif %}>0.01 (1%)</option>
+            <option value="0.001" {% if form_data and form_data.alpha == '0.001' %}selected{% endif %}>0.001 (0.1%)</option>
+        </select>
+         <small>The probability in the upper tail of the distribution corresponding to the critical value.</small>
+    </div>
+    <button type="submit">Find Critical Value</button>
+</form>
+
+{% if result_value %}
+<div class="results-section">
+    <h3>Result</h3>
+    <p>
+        For <strong>df = {{ result_value.df }}</strong> and <strong>alpha (α) = {{ result_value.alpha }}</strong>:
+    </p>
+    <p style="font-size: 1.2em; font-weight: bold; color: var(--primary-color);">
+         The critical Chi-Square value is: {{ "%.4f"|format(result_value.critical_value) }}
+    </p>
+    <p><small>Any calculated Chi-Square statistic greater than this value would be statistically significant at your chosen alpha level.</small></p>
+</div>
+{% endif %}
+
+<section>
+     <h3>Need Help?</h3>
+    <p><a href="{{ url_for('learn_more') }}#df">Learn how to calculate degrees of freedom.</a></p>
+    <p><a href="{{ url_for('learn_more') }}#interpreting">Understand the role of alpha and critical values in hypothesis testing.</a></p>
+</section>
+
+{% endblock %}

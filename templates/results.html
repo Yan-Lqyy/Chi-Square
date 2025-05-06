@@ -1,52 +1,75 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-    {# Display Assumption Warnings prominently at the top #}
+
+    {# Display Assumption Warnings prominently #}
     {% if result.assumption_warnings %}
     <div class="warnings">
         <strong>Assumption Warnings:</strong>
-        <ul>
-            {% for warning in result.assumption_warnings %}
-            <li>{{ warning }}</li>
-            {% endfor %}
-        </ul>
-        <small>These may affect the validity of the results.</small>
+        {# The warnings are already formatted with HTML list in the result object's interpretation #}
+         {{ result.interpretation | safe }}
+        {# Add a link to the relevant learn more section #}
+         <p><small>Understanding these warnings is important for interpreting the results. <a href="{{ url_for('learn_more') }}#assumptions">Learn more about Chi-Square assumptions.</a></small></p>
     </div>
     {% endif %}
 
     {# Main Results Section #}
     <div class="results-section">
         <h3>Test Summary</h3>
-        {% if result.chi2_statistic is not none and result.p_value is not none %}
+        {% if result.chi2_statistic is not none and result.p_value is not none and result.degrees_of_freedom is not none %}
             <p>
                 <strong>Test Type:</strong> {{ result.test_type }} <br>
+                <strong>Significance Level (Alpha):</strong> {{ result.alpha }} <br>
                 <strong>Chi-Square Statistic (χ²):</strong> {{ "%.4f"|format(result.chi2_statistic) }} <br>
                 <strong>Degrees of Freedom (df):</strong> {{ result.degrees_of_freedom }} <br>
                 <strong>P-value:</strong> {{ "%.4f"|format(result.p_value) }}
                 {% if result.p_value < 0.001 %} (p &lt; 0.001){% endif %}
             </p>
-            <p><strong>Result is statistically {{ 'SIGNIFICANT' if result.significant else 'NOT significant' }} at alpha = 0.05.</strong></p>
+            <p><strong>Result is statistically {{ 'SIGNIFICANT' if result.significant else 'NOT significant' }} at the chosen alpha level (p {{ '<' if result.significant else '≥' }} {{ result.alpha }}).</strong></p>
         {% else %}
-             <p>Calculation could not be completed. Check warnings above or inputs.</p>
+             <p>Calculation could not be fully completed. Please review the input data and any warnings above.</p>
         {% endif %}
     </div>
 
      {# Interpretation #}
+     {% if result.interpretation %}
+        <div class="results-section">
+            <h3>Interpretation</h3>
+            <div class="interpretation">
+                 {{ result.interpretation | safe }} {# Use safe filter for Markup HTML #}
+                 <p><small><a href="{{ url_for('learn_more') }}#interpreting">Learn more about interpreting results.</a></small></p>
+            </div>
+        </div>
+     {% endif %}
+
+
+    {# --- Chi-Square Distribution Plot --- #}
+    {% if plot_div %}
     <div class="results-section">
-        <h3>Interpretation</h3>
-        <div class="interpretation">
-             {{ result.interpretation }} {# Use Markup filter in route to allow safe basic HTML #}
+        <h3>Chi-Square Distribution Plot</h3>
+        <p>The plot shows the Chi-Square probability density function (PDF) for {{ result.degrees_of_freedom }} degrees of freedom.
+           The <span style="color: green; font-weight: bold;">green line</span> represents your calculated test statistic (χ² = {{ "%.3f"|format(result.chi2_statistic) if result.chi2_statistic is not none else "N/A" }}).
+           The <span style="color: red; font-weight: bold;">dashed red line</span> indicates the critical value for α = {{ result.alpha }}.
+           The <span style="background-color: rgba(255, 0, 0, 0.3);">shaded red area</span> is the rejection region, representing the probability α.
+           <br>If the green statistic line falls within the shaded red region (i.e., χ² > critical value), your result is statistically significant at the {{ result.alpha }} level, corresponding to a p-value less than alpha.
+        </p>
+        <div class="plot-container">
+             {{ plot_div|safe }} {# Render the Plotly HTML #}
         </div>
     </div>
+    {% endif %}
 
-    {# Display Effect Size if available (Contingency Table) #}
+
+    {# Display Effect Size if available #}
     {% if result.effect_size %}
     <div class="results-section">
         <h3>Effect Size</h3>
         <p>
             <strong>{{ result.effect_size.name }}:</strong> {{ "%.4f"|format(result.effect_size.value) }} <br>
-            <strong>Interpretation:</strong> {{ result.effect_size.interpretation | capitalize }} effect
+            <strong>Interpretation:</strong> A <strong>{{ result.effect_size.interpretation | capitalize }}</strong> effect size.
+            <br><small><a href="{{ url_for('learn_more') }}#effectsize">Learn more about effect sizes and their interpretation benchmarks.</a></small>
         </p>
     </div>
     {% endif %}
@@ -54,25 +77,27 @@
     {# Display Observed and Expected Tables #}
     <div class="results-section">
         <h3>Frequencies</h3>
-        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+        <div class="table-container"> {# Use flexbox for side-by-side tables #}
             {# Observed Table #}
             {% if result.observed %}
-            <div>
+            <div class="table-wrapper">
                 <h4>Observed Frequencies</h4>
-                {% if result.observed[0] is iterable and not result.observed[0] is string %} {# Check if 2D #}
+                {# Check if 2D array/list of lists #}
+                {% if result.observed is iterable and result.observed|length > 0 and result.observed[0] is iterable and not result.observed[0] is string %}
                     <table>
                         <thead>
-                            <tr><th></th>{% for j in range(result.observed[0]|length) %}<th>Col {{ j }}</th>{% endfor %}</tr>
+                            <tr><th></th>{% for j in range(result.observed[0]|length) %}<th>Col {{ j + 1 }}</th>{% endfor %}</tr> {# Use 1-based column index #}
                         </thead>
                         <tbody>
                         {% for i, row in enumerate(result.observed) %}
-                            <tr><th>Row {{ i }}</th>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                            <tr><th>Row {{ i + 1 }}</th>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr> {# Use 1-based row index #}
                         {% endfor %}
                         </tbody>
                     </table>
-                 {% else %} {# Assume 1D for GoF #}
+                 {# Assume 1D for GoF #}
+                 {% elif result.observed is iterable and result.observed|length > 0 %}
                     <table>
-                         <thead><tr>{% for i in range(result.observed|length) %}<th>Cat {{ i }}</th>{% endfor %}</tr></thead>
+                         <thead><tr>{% for i in range(result.observed|length) %}<th>Category {{ i + 1 }}</th>{% endfor %}</tr></thead> {# Use 1-based category index #}
                          <tbody><tr>{% for cell in result.observed %}<td>{{ cell }}</td>{% endfor %}</tr></tbody>
                     </table>
                  {% endif %}
@@ -81,73 +106,81 @@
 
             {# Expected Table #}
             {% if result.expected %}
-            <div>
-                <h4>Expected Frequencies</h4>
-                 {% if result.expected[0] is iterable and not result.expected[0] is string %} {# Check if 2D #}
+            <div class="table-wrapper">
+                <h4>Expected Frequencies <small>(Under Null Hypothesis)</small></h4>
+                 {# Check if 2D array/list of lists #}
+                 {% if result.expected is iterable and result.expected|length > 0 and result.expected[0] is iterable and not result.expected[0] is string %}
                     <table>
                          <thead>
-                            <tr><th></th>{% for j in range(result.expected[0]|length) %}<th>Col {{ j }}</th>{% endfor %}</tr>
+                            <tr><th></th>{% for j in range(result.expected[0]|length) %}<th>Col {{ j + 1 }}</th>{% endfor %}</tr> {# Use 1-based column index #}
                         </thead>
                         <tbody>
                         {% for i, row in enumerate(result.expected) %}
-                            <tr><th>Row {{ i }}</th>{% for cell in row %}<td>{{ "%.2f"|format(cell) }}</td>{% endfor %}</tr>
+                            <tr><th>Row {{ i + 1 }}</th>{% for cell in row %}<td>{{ "%.2f"|format(cell) }}</td>{% endfor %}</tr> {# Use 1-based row index, format to 2 decimal places #}
                         {% endfor %}
                         </tbody>
                     </table>
-                 {% else %} {# Assume 1D for GoF #}
+                 {# Assume 1D for GoF #}
+                 {% elif result.expected is iterable and result.expected|length > 0 %}
                     <table>
-                         <thead><tr>{% for i in range(result.expected|length) %}<th>Cat {{ i }}</th>{% endfor %}</tr></thead>
-                         <tbody><tr>{% for cell in result.expected %}<td>{{ "%.2f"|format(cell) }}</td>{% endfor %}</tr></tbody>
+                         <thead><tr>{% for i in range(result.expected|length) %}<th>Category {{ i + 1 }}</th>{% endfor %}</tr></thead> {# Use 1-based category index #}
+                         <tbody><tr>{% for cell in result.expected %}<td>{{ "%.2f"|format(cell) }}</td>{% endfor %}</tr></tbody> {# Format to 2 decimal places #}
                     </table>
                  {% endif %}
             </div>
             {% endif %}
-        </div>
+        </div> {# End table-container #}
     </div>
 
 
-    {# Display Post-Hoc Residuals if available (Contingency Table & Significant) #}
+    {# Display Post-Hoc Residuals if available (Contingency Table) #}
     {% if result.residuals %}
     <div class="results-section">
         <h3>Post-Hoc Analysis: Adjusted Residuals</h3>
-        <p>Adjusted residuals indicate the deviation of observed from expected counts in each cell. Values with an absolute magnitude greater than ~1.96 suggest the cell contributes significantly (p &lt; .05) to the overall Chi-Square result.</p>
+        <p>Adjusted residuals indicate the difference between observed and expected counts in each cell, standardized to account for sampling variability. Values with an absolute magnitude greater than the critical value for a standard normal distribution (e.g., |1.96| for a two-tailed alpha of 0.05) suggest the cell contributes significantly to the overall Chi-Square result. </p>
+         {# Add context based on overall significance #}
          {% if not result.significant %}
-            <p><small>(Note: Overall test was not significant, so interpret residuals with caution.)</small></p>
+            <p><small>(Note: The overall Chi-Square test was not statistically significant at α = {{ result.alpha }}. While individual cell deviations are shown below, interpret these residuals with caution as exploratory findings.)</small></p>
          {% endif %}
 
-        <table class="residuals-table">
-             <thead>
-                <tr><th></th>{% for j in range(result.residuals[0]|length) %}<th>Col {{ j }}</th>{% endfor %}</tr>
-            </thead>
-            <tbody>
-            {% for i, row in enumerate(result.residuals) %}
-                <tr>
-                    <th>Row {{ i }}</th>
-                    {% for j, cell in enumerate(row) %}
-                        {# Check if this cell is in the significant list #}
-                        {% set is_significant = false %}
-                        {% if result.significant_residuals %}
-                            {% for sig_r, sig_c, sig_val in result.significant_residuals %}
-                                {% if sig_r == i and sig_c == j %}
-                                    {% set is_significant = true %}
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                        <td {% if is_significant %}class="significant"{% endif %}>
-                            {{ "%.2f"|format(cell) }}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+         <div class="table-wrapper"> {# Wrap table for consistent styling #}
+            <table class="residuals-table">
+                 <thead>
+                    <tr><th></th>{% for j in range(result.residuals[0]|length) %}<th>Col {{ j + 1 }}</th>{% endfor %}</tr> {# 1-based column index #}
+                </thead>
+                <tbody>
+                {% for i, row in enumerate(result.residuals) %}
+                    <tr>
+                        <th>Row {{ i + 1 }}</th> {# 1-based row index #}
+                        {% for j, cell in enumerate(row) %}
+                            {# Check if this cell is in the significant list #}
+                            {# The significant_residuals list contains 0-based indices from Python #}
+                            {% set is_significant = false %}
+                            {% if result.significant_residuals %}
+                                {% for sig_r, sig_c, sig_val in result.significant_residuals %}
+                                    {% if sig_r == i and sig_c == j %}
+                                        {% set is_significant = true %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            <td {% if is_significant %}class="significant"{% endif %}>
+                                {{ "%.2f"|format(cell) }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+         </div>
          {% if result.significant_residuals %}
-             <p><strong>Bolded cells</strong> indicate a significant contribution to the overall Chi-Square statistic.</p>
+             <p><strong>Highlighted cells</strong> indicate a statistically significant deviation (residual |value| > {{ result.significant_residuals[0][2]|abs|format("%.2f") if result.significant_residuals else '?' }} if sorting is applied, or generally > |1.96|).</p> {# Referencing the threshold is better #}
+              <p><small>The standard threshold for significance is |residual| > 1.96 (for α = 0.05). <a href="{{ url_for('learn_more') }}#posthoc">Learn more about post-hoc analysis.</a></small></p>
          {% elif result.significant %}
-              <p>No individual cells found with residuals exceeding the significance threshold (|1.96|).</p>
+              <p>No individual cells found with adjusted residuals exceeding the standard significance threshold (|1.96|), despite the overall test being significant. The overall effect may be spread across multiple cells.</p>
          {% endif %}
     </div>
     {% endif %}
 
-    <p style="margin-top: 30px;"><a href="{{ url_for('index') }}">Back to Home</a></p>
+    <p style="margin-top: 30px;"><a href="{{ url_for('index') }}" class="button-link">Back to Home</a></p>
+
 {% endblock %}

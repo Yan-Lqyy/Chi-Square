@@ -3,60 +3,50 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <!-- Single definition for the browser title -->
     <title>{% block title %}Chi-Square Calculator{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-      body { font-family: sans-serif; margin: 20px; }
-      .container { max-width: 800px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
-      nav { margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-      nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
-      nav a:hover { text-decoration: underline; }
-      .flash { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-      .flash.danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-      .flash.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-      .flash.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-      .flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-      label { display: block; margin-top: 10px; font-weight: bold; }
-      input[type=text], textarea { width: 95%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
-      textarea { min-height: 80px; resize: vertical; }
-      button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; }
-      button:hover { background-color: #0056b3; }
-      .results-section { margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
-      .results-section h3 { margin-top: 0; }
-      table { border-collapse: collapse; width: auto; margin-top: 10px; }
-      th, td { border: 1px solid #ddd; padding: 6px; text-align: right; }
-      th { background-color: #f2f2f2; text-align: center; }
-      td.text-left { text-align: left; }
-      .interpretation { background: #eef; padding: 10px; border-left: 3px solid #007bff; margin-top: 10px; }
-      .warnings { background: #fff3cd; padding: 10px; border-left: 3px solid #ffc107; margin-top: 10px; }
-      .residuals-table td.significant { font-weight: bold; background-color: #f8d7da; }
-  </style>
-
+     {# Include Plotly JS library from CDN for interactive plots #}
+    <script src="https://cdn.plot.ly/plotly-2.latest.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <nav>
-            <a href="{{ url_for('index') }}">Home</a>
-            <a href="{{ url_for('goodness_of_fit_view') }}">Goodness of Fit</a>
-            <a href="{{ url_for('contingency_test_view') }}">Contingency Table Test</a>
-        </nav>
+        <header>
+            <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
+             <nav>
+                <a href="{{ url_for('index') }}">Home</a>
+                <a href="{{ url_for('goodness_of_fit_view') }}">Goodness of Fit Test</a>
+                <a href="{{ url_for('contingency_test_view') }}">Contingency Table Test</a>
+                <a href="{{ url_for('critical_value_lookup') }}">Critical Value Lookup</a>
+                <a href="{{ url_for('learn_more') }}">Learn More</a>
+            </nav>
+        </header>
 
-        <!-- Corrected H1 using page_title block, defaulting to the title block's content -->
-        <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
 
         {# Display flashed messages #}
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
+            <div class="flash-messages">
             {% for category, message in messages %}
-              <div class="flash {{ category }}">{{ message }}</div>
+              <div class="flash {{ category }}">{{ message|safe }}</div> {# Use safe filter as messages can be Markup #}
             {% endfor %}
+            </div>
           {% endif %}
         {% endwith %}
 
-        {% block content %}{% endblock %}
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+
+        <footer>
+            <p>&copy; {{ moment(now).format('YYYY') }} Chi-Square Web App. Built with Flask, NumPy, SciPy, Plotly.</p>
+        </footer>
     </div>
 
     {% block scripts %}{% endblock %}
+
+     {# Optional: include moment.js for footer year - requires flask_moment or just hardcode YYYY #}
+     {# <script src="{{ url_for('static', filename='moment.min.js') }}"></script> #}
+     {# <script>var now = new Date();</script> #}
 </body>
 </html>

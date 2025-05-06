@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Learn More About Chi-Square Tests{% endblock %}
+{% block page_title %}Learn More About Chi-Square Tests{% endblock %}
+
+{% block content %}
+
+<section id="introduction">
+    <h2>What are Chi-Square (χ²) Tests?</h2>
+    <p>Chi-Square tests are fundamental statistical tools for analyzing categorical data (data that fits into distinct categories, like "Yes/No", "Male/Female", "Color A/B/C"). They allow researchers to test hypotheses about the distribution of categories or the association between different categorical variables.</p>
+    <p>The core principle involves comparing the frequencies of observations you actually recorded (<strong>Observed Frequencies</strong>) against the frequencies you would theoretically expect to see if a specific hypothesis were true (<strong>Expected Frequencies</strong>).</p>
+</section>
+
+<section id="types">
+    <h2>Types of Chi-Square Tests</h2>
+    <p>While the underlying mathematical calculation is similar, the interpretation and application differ based on the test objective and study design:</p>
+    <h3>1. Chi-Square Goodness-of-Fit Test</h3>
+    <ul>
+        <li><strong>Purpose:</strong> Determines if a sample's observed distribution across different categories aligns with a hypothesized or known population distribution. It's about testing a single categorical variable against a predefined expectation.</li>
+        <li><strong>Example Scenario:</strong> A company claims 40% of its users prefer Product A, 30% Product B, and 30% Product C. A researcher surveys 100 users to see if the observed preferences in their sample match this claimed distribution.</li>
+        <li><strong>Null Hypothesis (H₀):</strong> The observed frequencies of categories match the expected frequencies (i.e., the sample distribution fits the hypothesized population distribution).</li>
+        <li><strong>Alternative Hypothesis (H₁):</strong> The observed frequencies do not match the expected frequencies (i.e., the sample distribution differs from the hypothesized population distribution).</li>
+    </ul>
+    <h3>2. Chi-Square Test of Independence</h3>
+    <ul>
+        <li><strong>Purpose:</strong> Examines whether there is a statistically significant association (or relationship) between two categorical variables within a single sample or population. It assesses if the values of one variable depend on the values of the other.</li>
+        <li><strong>Example Scenario:</strong> A sociologist wants to know if there is a relationship between a person's highest level of education (High School, Bachelor's, Graduate) and their preferred news source (TV, Online, Print). They collect data from a sample and organize it into a contingency table.</li>
+        <li><strong>Data Format:</strong> Requires a <a href="#contingency-table-structure">contingency table</a> (cross-tabulation) showing the counts for each combination of categories of the two variables.</li>
+        <li><strong>Null Hypothesis (H₀):</strong> The two categorical variables are independent (there is no association between them in the population).</li>
+        <li><strong>Alternative Hypothesis (H₁):</strong> The two categorical variables are dependent (there is an association between them in the population).</li>
+    </ul>
+     <h3>3. Chi-Square Test of Homogeneity</h3>
+    <ul>
+        <li><strong>Purpose:</strong> Compares the distribution of a single categorical variable across two or more independent populations or groups to see if they are the same (homogeneous).</li>
+        <li><strong>Example Scenario:</strong> A market researcher surveys consumers in three different cities (City X, City Y, City Z) to see if the distribution of preference for a new product (Prefer, Neutral, Do Not Prefer) is the same in all three cities. Each city is a separate population/group.</li>
+        <li><strong>Data Format:</strong> Also uses a <a href="#contingency-table-structure">contingency table</a>, but the structure reflects the groups as one dimension and the categories of the variable as the other.</li>
+        <li><strong>Null Hypothesis (H₀):</strong> The distribution of the categorical variable is the same (homogeneous) across all populations/groups.</li>
+        <li><strong>Alternative Hypothesis (H₁):</strong> The distribution of the categorical variable is different in at least one population/group.</li>
+        <li><strong>Note:</strong> While the calculation of the Chi-Square statistic and p-value is the same as the Test of Independence, the interpretation focuses on comparing distributions between groups rather than the general association between variables.</li>
+    </ul>
+</section>
+
+<section id="contingency-table-structure">
+    <h2>Contingency Table Structure</h2>
+    <p>Contingency tables (also called cross-tabulations) are used for Tests of Independence and Homogeneity. They are grid-like tables that display the observed frequencies for the combinations of categories from two categorical variables.</p>
+    <p>For example, a 2x3 contingency table (2 rows, 3 columns) might look like this:</p>
+    <table>
+        <thead>
+            <tr><th></th><th>Category B1</th><th>Category B2</th><th>Category B3</th></tr>
+        </thead>
+        <tbody>
+            <tr><th>Category A1</th><td>Count<sub>11</sub></td><td>Count<sub>12</sub></td><td>Count<sub>13</sub></td></tr>
+            <tr><th>Category A2</th><td>Count<sub>21</sub></td><td>Count<sub>22</sub></td><td>Count<sub>23</sub></td></tr>
+        </tbody>
+    </table>
+    <p>Where Count<sub>ij</sub> is the number of observations that fall into Category A<sub>i</sub> and Category B<sub>j</sub>.</p>
+</section>
+
+
+<section id="calculation">
+    <h2>Calculating the Chi-Square Statistic (χ²)</h2>
+    <p>The Chi-Square statistic is a measure of the discrepancy between the observed and expected frequencies. The larger the difference, the larger the χ² value.</p>
+    <p>The formula is:</p>
+    <p style="text-align: center; font-size: 1.2em; font-family: monospace; font-weight: bold;">
+        χ² = Σ [ (O - E)² / E ]
+    </p>
+    <ul>
+        <li><strong>Σ (Sigma):</strong> Summation across all categories (GoF) or all cells (Contingency Tables).</li>
+        <li><strong>O:</strong> The observed frequency in a specific category or cell.</li>
+        <li><strong>E:</strong> The expected frequency in that same category or cell, calculated assuming the null hypothesis is true.</li>
+    </ul>
+    <p>The expected frequencies for a contingency table are calculated based on the row and column totals:</p>
+     <p style="text-align: center; font-size: 1.1em; font-family: monospace;">
+        Expected<sub>ij</sub> = (Row i Total * Column j Total) / Grand Total
+    </p>
+     <p>For a Goodness-of-Fit test with a uniform distribution, Expected<sub>i</sub> = Total Observations / Number of Categories.</p>
+</section>
+
+<section id="df">
+    <h2>Degrees of Freedom (df)</h2>
+    <p>The degrees of freedom (df) specify which specific Chi-Square distribution curve is used to determine the p-value. It represents the number of values in the calculation that are free to vary.</p>
+    <ul>
+        <li><strong>Goodness-of-Fit:</strong> df = k - 1, where k is the number of categories. (Subtract an additional degree of freedom for each parameter estimated from the sample data, though this is less common in basic GoF tests).</li>
+        <li><strong>Independence/Homogeneity:</strong> df = (Number of Rows - 1) * (Number of Columns - 1).</li>
+    </ul>
+    <p>You can use the <a href="{{ url_for('critical_value_lookup') }}">Critical Value Lookup</a> tool to find critical values for different dfs and alpha levels.</p>
+</section>
+
+<section id="interpreting">
+    <h2>Interpreting the Results: P-value and Alpha</h2>
+    <p>After calculating the Chi-Square statistic and degrees of freedom, a statistical table or software is used to find the p-value.</p>
+    <ul>
+        <li><strong>P-value:</strong> The probability of obtaining a test statistic as extreme as (or more extreme than) the one calculated from your data, assuming the null hypothesis (H₀) is true.</li>
+        <li><strong>Significance Level (Alpha, α):</strong> A threshold probability you set *before* conducting the test (commonly α = 0.05). It represents the maximum risk you are willing to accept of incorrectly rejecting the null hypothesis (Type I error).</li>
+    </ul>
+    <p><strong>Decision Rule:</strong></p>
+    <ul>
+        <li>If <strong>p-value < α</strong>, you reject the null hypothesis. The result is considered "statistically significant," suggesting there is enough evidence in your sample to conclude that the null hypothesis is likely false in the population.</li>
+        <li>If <strong>p-value ≥ α</strong>, you fail to reject the null hypothesis. There is not enough statistical evidence from your sample to conclude that the null hypothesis is false.</li>
+    </ul>
+    <p>Your selected alpha level (e.g., 0.05) directly corresponds to a critical value on the Chi-Square distribution curve for your given degrees of freedom. If your calculated Chi-Square statistic is greater than this critical value, your p-value will be less than alpha, leading to rejection of H₀.</p>
+</section>
+
+<section id="assumptions">
+    <h2>Assumptions of Chi-Square Tests</h2>
+    <p>Violating these assumptions can lead to inaccurate p-values and conclusions:</p>
+    <ol>
+        <li><strong>Categorical Data:</strong> Data must be counts for discrete categories.</li>
+        <li><strong>Independence:</strong> Each observation or response must be independent of all other observations. This is violated, for example, if you repeatedly sample from the same individuals or if observations within groups influence each other.</li>
+        <li><strong>Sufficient Expected Cell Counts:</strong> This is a critical assumption. The Chi-Square test statistic approximates a continuous distribution, which works best when expected counts are not too small. A widely cited rule is that <strong>all expected cell counts should be 5 or greater</strong>. Some sources suggest it's acceptable if no more than 20% of cells have expected counts less than 5, and no cell has an expected count less than 1. If this assumption is violated, especially in 2x2 tables with any expected count less than 5, Fisher's Exact Test is often a more appropriate alternative. For larger tables with many low expected counts, combining categories (if theoretically justifiable) or using alternative tests might be necessary.</li>
+        <li><strong>Random Sampling:</strong> Ideally, the data should come from a simple random sample of the population(s) of interest.</li>
+    </ol>
+    <p>Our calculator provides warnings if the expected cell count assumption is violated.</p>
+</section>
+
+<section id="effectsize">
+    <h2>Effect Size</h2>
+    <p>A statistically significant result (p < α) tells you that an effect or association likely exists, but not how *strong* or *practically important* it is. Effect sizes quantify the magnitude of the association.</p>
+    <ul>
+        <li><strong>Phi Coefficient (Φ):</strong> Used for 2x2 contingency tables. Ranges from 0 (no association) to 1 (perfect association). Benchmarks (absolute value): 0.10 (small), 0.30 (medium), 0.50 (large).</li>
+        <li><strong>Cramér's V:</strong> Used for contingency tables larger than 2x2. Also ranges from 0 to 1. Similar benchmarks to Phi, but interpretation can be slightly adjusted based on degrees of freedom. Benchmarks often cited (absolute value): ~0.1 (small), ~0.3 (medium), ~0.5 (large).</li>
+    </ul>
+    <p>It's important to consider both statistical significance (p-value) and practical significance (effect size) when interpreting your results.</p>
+</section>
+
+<section id="posthoc">
+    <h2>Post-Hoc Analysis: Adjusted Residuals</h2>
+    <p>When a Chi-Square test for a contingency table larger than 2x2 (or GoF with >2 categories) is statistically significant, it indicates an overall difference or association exists, but it doesn't tell you *which specific categories or cells* are driving this significance.</p>
+    <p>Post-hoc analysis, such as examining <strong>adjusted (or standardized) residuals</strong>, can help identify the specific locations of significant deviations from expected frequencies.</p>
+    <ul>
+        <li><strong>Adjusted Residual:</strong> For each cell in the table, it's calculated as (Observed - Expected) divided by an estimate of the standard error. The residuals approximately follow a standard normal distribution (Z-distribution).</li>
+        <li><strong>Interpretation:</strong> Cells with large absolute adjusted residuals (e.g., greater than |1.96| for an approximate 0.05 significance level, two-tailed) indicate that the observed frequency in that cell is significantly different from the expected frequency, contributing notably to the overall significant Chi-Square result.</li>
+        <li>A positive residual means the observed count is significantly higher than expected.</li>
+        <li>A negative residual means the observed count is significantly lower than expected.</li>
+    </ul>
+    <p>On the results page for contingency tables, cells with significant adjusted residuals (absolute value > {{ RESIDUAL_SIGNIFICANCE_THRESHOLD }}) are highlighted.</p>
+</section>
+
+<section id="limitations">
+    <h2>Limitations</h2>
+    <ul>
+        <li>Chi-Square tests are sensitive to sample size. With very large samples, even small, practically insignificant differences can be statistically significant.</li>
+        <li>They only tell you if an association or difference exists, not the nature or direction of the relationship (though examining observed vs. expected and residuals helps with this).</li>
+        <li>They are designed for categorical data and are not appropriate for continuous data without binning (which can lose information).</li>
+    </ul>
+</section>
+
+{% endblock %}

@@ -3,10 +3,10 @@
 """Main interface for performing Chi-Square tests."""
 
 from typing import Optional, List, Union
-
 import numpy as np
 from scipy import stats
 
+# Assuming other modules are in the same package directory
 from . import utils
 from . import effect_sizes
 from . import post_hoc
@@ -20,6 +20,7 @@ def run_goodness_of_fit(
     observed_freqs: Union[List[int], np.ndarray],
     expected_freqs: Optional[Union[List[float], np.ndarray]] = None,
     expected_probs: Optional[Union[List[float], np.ndarray]] = None,
+    alpha: float = 0.05 # Add alpha parameter
 ) -> GoodnessOfFitResult:
     """
     Performs a Chi-Square Goodness-of-Fit test.
@@ -31,11 +32,12 @@ def run_goodness_of_fit(
         observed_freqs: A list or NumPy array of observed counts for each category.
                         Must contain non-negative integers.
         expected_freqs: Optional. A list or NumPy array of expected counts.
-                        Must have the same length as observed_freqs and sum to the
-                        same total as observed_freqs.
+                        Must have the same length as observed_freqs. If sum differs,
+                        expected frequencies will be scaled to match observed total.
         expected_probs: Optional. A list or NumPy array of expected probabilities/proportions.
                         Must have the same length as observed_freqs and sum to 1.0.
                         Cannot be used if expected_freqs is provided.
+        alpha: The significance level (0 < alpha < 1) to use for determining significance.
 
     Returns:
         A GoodnessOfFitResult object containing test results and interpretation.
@@ -43,13 +45,17 @@ def run_goodness_of_fit(
     Raises:
         ValueError: If inputs are invalid (e.g., wrong lengths, negative counts,
                     both expected_freqs and expected_probs provided, probabilities
-                    don't sum to 1).
+                    don't sum to 1, invalid alpha).
         TypeError: If input types are incorrect.
     """
+    # Input validation and parsing
     try:
-        f_obs = utils.safe_to_ndarray(observed_freqs, dtype=np.int_) # Observed should be counts
-        if np.any(f_obs != observed_freqs): # Check if any were truncated/changed
-             raise ValueError("Observed frequencies must be integers.")
+        # Observed frequencies must be integers (counts)
+        f_obs = utils.safe_to_ndarray(observed_freqs, dtype=np.int64)
+        # Check if conversion truncated non-integers, though safe_to_ndarray should raise
+        if not np.all(np.equal(f_obs, observed_freqs)):
+             raise ValueError("Observed frequencies must be whole numbers (integers).")
+
     except (ValueError, TypeError) as e:
         raise ValueError(f"Invalid observed frequencies: {e}") from e
 
@@ -58,6 +64,10 @@ def run_goodness_of_fit(
 
     if k <= 1:
         raise ValueError("Goodness of Fit test requires at least 2 categories.")
+
+    # Validate alpha
+    if not (0 < alpha < 1):
+        raise ValueError("Significance level (alpha) must be between 0 and 1.")
 
     f_exp = None
     warnings = []
@@ -68,20 +78,24 @@ def run_goodness_of_fit(
 
     elif expected_freqs is not None:
         try:
+            # Expected can be floats
             f_exp = utils.safe_to_ndarray(expected_freqs, dtype=np.float64)
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid expected frequencies: {e}") from e
 
         if len(f_exp) != k:
             raise ValueError("Observed and expected frequencies must have the same number of categories.")
-        if not np.isclose(np.sum(f_exp), n_obs):
-            # Option 1: Raise error
-            # raise ValueError("Sum of expected frequencies must equal sum of observed frequencies.")
-            # Option 2: Scale expected to match observed total (common practice)
-            warnings.append("Warning: Sum of expected frequencies did not match sum of observed. Scaling expected frequencies.")
-            f_exp = (f_exp / np.sum(f_exp)) * n_obs
-            if np.any(np.isnan(f_exp)): # Check if scaling caused issues (e.g. sum(f_exp) was 0)
-                raise ValueError("Could not scale expected frequencies (original sum might be zero).")
+
+        # Option: Scale expected to match observed total if sums differ (common practice)
+        sum_f_exp = np.sum(f_exp)
+        if not np.isclose(sum_f_exp, n_obs):
+             if np.isclose(sum_f_exp, 0):
+                  # Avoid division by zero if expected sums to zero
+                  raise ValueError("Sum of provided expected frequencies is zero, cannot scale.")
+             warnings.append(f"Warning: Sum of expected frequencies ({sum_f_exp:.2f}) did not match sum of observed ({n_obs}). Scaling expected frequencies.")
+             f_exp = (f_exp / sum_f_exp) * n_obs
+             if np.any(np.isnan(f_exp)): # Should not happen if sum_f_exp was non-zero
+                 raise ValueError("Scaling expected frequencies resulted in NaN values.")
 
 
     elif expected_probs is not None:
@@ -93,53 +107,68 @@ def run_goodness_of_fit(
         if len(probs) != k:
             raise ValueError("Observed frequencies and expected probabilities must have the same number of categories.")
         if not np.isclose(np.sum(probs), 1.0):
-            raise ValueError("Expected probabilities must sum to 1.0.")
+            raise ValueError(f"Expected probabilities must sum to 1.0 (they sum to {np.sum(probs):.4f}).")
         if np.any(probs < 0) or np.any(probs > 1):
             raise ValueError("Expected probabilities must be between 0 and 1.")
 
         f_exp = probs * n_obs
 
     else:
-        # Default: Assume uniform distribution
+        # Default: Assume uniform distribution if no expected values are provided
         warnings.append("Assuming uniform distribution for expected frequencies as none were provided.")
-        f_exp = np.full(k, fill_value=n_obs / k, dtype=np.float64)
+        if n_obs == 0:
+             f_exp = np.zeros(k, dtype=np.float64) # If no observations, expected are 0
+        else:
+             f_exp = np.full(k, fill_value=n_obs / k, dtype=np.float64)
 
 
     # Check for zero expected frequencies AFTER calculation/scaling
-    if np.any(np.isclose(f_exp, 0)):
-         zero_indices = np.where(np.isclose(f_exp, 0))[0]
-         # SciPy chisquare might handle this, but good to warn or error
-         # If f_obs[i] is also 0 where f_exp[i] is 0, the contribution is 0.
-         # If f_obs[i] > 0 where f_exp[i] is 0, chi2 is infinite. SciPy handles this.
+    # SciPy's chisquare handles cases where f_obs[i] > 0 and f_exp[i] = 0 by returning inf Chi2.
+    # If f_obs[i] = 0 and f_exp[i] = 0, that category's contribution is 0 and SciPy handles it.
+    zero_expected_mask = np.isclose(f_exp, 0)
+    if np.any(zero_expected_mask):
+         zero_indices = np.where(zero_expected_mask)[0]
+         # Check if there are non-zero observed frequencies where expected are zero
          if np.any(f_obs[zero_indices] > 0):
-              warnings.append("Warning: Observed frequency > 0 exists where expected frequency is 0. Chi-square statistic will be infinite.")
-         else:
-              warnings.append("Warning: Some expected frequencies are zero. Corresponding observed frequencies must also be zero.")
-              # We might need to filter these categories out before passing to scipy
-              # For now, let scipy handle it but keep the warning.
+              warnings.append(
+                  "Warning: Found observed frequencies > 0 where expected frequencies are zero. "
+                  "The Chi-Square statistic will be infinite. This likely indicates an error in your expected frequencies or data structure."
+              )
+         # If f_obs are also 0 where f_exp are 0, it's typically okay but still unusual.
+         elif np.any(f_obs[zero_indices] == 0):
+              warnings.append("Warning: Some expected frequencies are zero. Corresponding observed frequencies must also be zero for the test to be meaningful (which they are in this case).")
 
 
     # Perform Chi-Square calculation using SciPy
-    # ddof (delta degrees of freedom) is 0 because we haven't estimated parameters
-    # from the data to *generate* the expected frequencies (they were given or uniform).
-    # If, for example, we estimated the mean of a Poisson distribution from the data
-    # to generate expected counts, ddof would be 1.
+    # ddof=0 because we haven't estimated parameters from the data to get f_exp
     try:
-        # Filter out categories where expected is zero? Scipy handles infinite result if obs > 0.
-        # Let's proceed carefully. If f_exp has zeros, chisquare might return inf/nan.
+        # SciPy handles filtering zero expected/observed cells internally for the calculation,
+        # but we need the original f_exp for the assumption check.
         chi2, p = stats.chisquare(f_obs=f_obs, f_exp=f_exp, ddof=0)
+        # Ensure p-value is within [0, 1] in case of float issues
+        p = max(0.0, min(1.0, p))
+
     except ValueError as e:
-        # Catch errors from scipy (e.g., if f_obs sum != f_exp sum after filtering,
-        # or other internal issues)
+        # Catch errors from scipy (e.g., if total observed differs significantly from total expected after filtering)
         return GoodnessOfFitResult(
             observed=f_obs,
             expected=f_exp,
-            assumption_warnings=warnings + [f"SciPy Error: {e}"],
-            interpretation="Chi-Square calculation failed."
+            alpha=alpha,
+            assumption_warnings=warnings + [f"SciPy calculation error: {e}"],
+            interpretation="Chi-Square calculation failed due to an internal error."
+        )
+    except Exception as e:
+        # Catch any other unexpected errors during calculation
+         return GoodnessOfFitResult(
+            observed=f_obs,
+            expected=f_exp,
+            alpha=alpha,
+            assumption_warnings=warnings + [f"An unexpected error occurred during calculation: {e}"],
+            interpretation="Chi-Square calculation failed due to an unexpected error."
         )
 
 
-    df = k - 1 - 0 # ddof is 0 here
+    df = k - 1 # Degrees of freedom for GoF with no parameters estimated
 
     # Assumption Check: Expected Frequencies
     assumption_warnings = utils.check_expected_frequencies(f_exp, MIN_EXPECTED_FREQUENCY)
@@ -147,18 +176,27 @@ def run_goodness_of_fit(
 
     # Create result object
     result = GoodnessOfFitResult(
-        chi2_statistic=float(chi2) if not np.isinf(chi2) and not np.isnan(chi2) else None, # Handle inf/nan
-        p_value=float(p) if not np.isnan(p) else None,
-        degrees_of_freedom=df,
+        chi2_statistic=float(chi2) if np.isfinite(chi2) else None, # Store as None if infinite/NaN
+        p_value=float(p) if np.isfinite(p) else None,
+        degrees_of_freedom=df if df >= 0 else None, # Ensure df is valid
         observed=f_obs,
         expected=f_exp,
-        assumption_warnings=warnings
-        # Interpretation is generated in __post_init__
+        assumption_warnings=warnings,
+        alpha=alpha # Pass alpha to result object
+        # Interpretation is generated in __post_init__ based on alpha
     )
 
-    # Add more specific interpretation if calculation failed
+    # Refine interpretation if statistic/p-value are not finite
     if result.chi2_statistic is None or result.p_value is None:
-         result.interpretation = "Chi-Square calculation resulted in undefined values (possibly due to zero expected frequencies with non-zero observed frequencies)."
+         # Specific message if infinite Chi2 was likely the cause
+         if np.isinf(chi2):
+             result.interpretation = (
+                 f"Chi-Square calculation resulted in an infinite statistic (χ² = inf). "
+                 "This typically happens when an observed frequency is greater than 0 but the corresponding expected frequency is 0. "
+                 "Check your data and expected values."
+             )
+         else:
+              result.interpretation = "Chi-Square calculation resulted in undefined values. Check inputs and assumption warnings."
 
 
     return result
@@ -167,7 +205,8 @@ def run_goodness_of_fit(
 def run_contingency_test(
     contingency_table: Union[List[List[int]], np.ndarray],
     correction: bool = False, # Yates' correction for 2x2 tables
-    test_type_hint: str = "Independence" # Or "Homogeneity" - affects interpretation wording slightly
+    test_type_hint: str = "Independence", # Or "Homogeneity" - affects interpretation wording
+    alpha: float = 0.05 # Add alpha parameter
 ) -> ContingencyTableResult:
     """
     Performs a Chi-Square test of Independence or Homogeneity on a contingency table.
@@ -182,78 +221,143 @@ def run_contingency_test(
         correction: Apply Yates' continuity correction (typically only for 2x2 tables).
                     Default is False.
         test_type_hint: Helps tailor the interpretation ('Independence' or 'Homogeneity').
+        alpha: The significance level (0 < alpha < 1) to use for determining significance.
 
     Returns:
         A ContingencyTableResult object containing test results, effect size,
         post-hoc analysis (if applicable), and interpretation.
 
     Raises:
-        ValueError: If inputs are invalid (e.g., not 2D, negative counts).
+        ValueError: If inputs are invalid (e.g., not 2D, negative counts, table too small,
+                    invalid alpha).
         TypeError: If input types are incorrect.
     """
+    # Input validation and parsing
     try:
-        observed_table = utils.safe_to_ndarray(contingency_table, dtype=np.int_)
-        if np.any(observed_table != contingency_table):
-             raise ValueError("Observed frequencies in the table must be integers.")
+        # Observed frequencies must be integers (counts)
+        observed_table = utils.safe_to_ndarray(contingency_table, dtype=np.int64)
+        if not np.all(np.equal(observed_table, contingency_table)):
+             raise ValueError("Observed frequencies in the table must be whole numbers (integers).")
         if observed_table.ndim != 2:
-             raise ValueError("Contingency table must be 2-dimensional.")
+             raise ValueError("Contingency table must be 2-dimensional (a list of lists or 2D array).")
         if observed_table.shape[0] < 2 or observed_table.shape[1] < 2:
              raise ValueError("Contingency table must have at least 2 rows and 2 columns.")
 
     except (ValueError, TypeError) as e:
-        raise ValueError(f"Invalid contingency table: {e}") from e
+        raise ValueError(f"Invalid contingency table data: {e}") from e
 
     rows, cols = observed_table.shape
     n_total = np.sum(observed_table)
 
+    # Validate alpha
+    if not (0 < alpha < 1):
+        raise ValueError("Significance level (alpha) must be between 0 and 1.")
+
     # Perform Chi-Square calculation using SciPy
     try:
-        # lambda_='likelihood' can be used for G-test instead
+        # chi2_contingency handles rows/cols summing to zero by returning NaN/Inf
+        # lambda_='pearson' is the standard Chi-Square statistic
         chi2, p, df, expected = stats.chi2_contingency(
             observed=observed_table,
             correction=correction,
-            lambda_=None
+            lambda_='pearson' # Explicitly request Pearson Chi-Square
         )
+        # Ensure p-value is within [0, 1]
+        p = max(0.0, min(1.0, p))
+
     except ValueError as e:
-         # This can happen if rows/columns sum to zero, leading to NaN expected values
+         # SciPy can raise ValueError, e.g., if rows/columns sum to zero making expected NaNs/Infs
         return ContingencyTableResult(
-            test_type=test_type_hint,
             observed=observed_table,
-            assumption_warnings=[f"SciPy Error during contingency calculation: {e}. Check for rows/columns summing to zero."],
-            interpretation="Chi-Square calculation failed for contingency table."
+            alpha=alpha,
+            assumption_warnings=[f"SciPy calculation error during contingency test: {e}. Check if any rows or columns in your table sum to zero."],
+            interpretation="Chi-Square calculation failed due to an internal error."
+        )
+    except Exception as e:
+        # Catch any other unexpected errors during calculation
+         return ContingencyTableResult(
+            observed=observed_table,
+            alpha=alpha,
+            assumption_warnings=[f"An unexpected error occurred during calculation: {e}"],
+            interpretation="Chi-Square calculation failed due to an unexpected error."
         )
 
+
     # Assumption Check: Expected Frequencies
+    # Do this AFTER SciPy calculates expected counts under the null hypothesis
     warnings = utils.check_expected_frequencies(expected, MIN_EXPECTED_FREQUENCY)
 
     # Calculate Effect Size
-    effect_size_result = effect_sizes.calculate_chi_square_effect_size(
-        chi2_stat=chi2, n=n_total, rows=rows, cols=cols
-    )
+    # Only calculate if Chi2 statistic is finite and non-negative
+    effect_size_result = None
+    if np.isfinite(chi2) and chi2 >= 0:
+        effect_size_result = effect_sizes.calculate_chi_square_effect_size(
+            chi2_stat=float(chi2), n=int(n_total), rows=rows, cols=cols # Ensure types are standard Python
+        )
+    elif not np.isfinite(chi2):
+         warnings.append("Warning: Cannot calculate effect size because the Chi-Square statistic is undefined (NaN or Inf).")
 
-    # Post-Hoc Analysis (Adjusted Residuals) - Run if the main test is significant
+
+    # Post-Hoc Analysis (Adjusted Residuals) - Run if the main test is significant at the chosen alpha
+    # Also check if Chi2 is finite and df is valid (>0) as residuals aren't meaningful otherwise.
     residuals = None
     significant_residuals = []
-    if p < 0.05: # Only makes sense if the overall test is significant
+    if df is not None and df > 0 and np.isfinite(chi2) and (p is not None and p < alpha):
         residuals = post_hoc.calculate_adjusted_residuals(observed_table, expected)
         if residuals is not None:
             significant_residuals = post_hoc.find_significant_residuals(
                 residuals, RESIDUAL_SIGNIFICANCE_THRESHOLD
             )
+        else:
+            # This case implies calculate_adjusted_residuals returned None (e.g. shape mismatch, which shouldn't happen here)
+            warnings.append("Warning: Could not calculate post-hoc residuals.")
+    elif df is not None and df == 0:
+         # df = 0 for 1xN or Nx1 tables, or if R=1, C=1 (caught by shape check)
+         # Residuals aren't typically done for df=0 cases
+         pass
+    elif df is not None and df < 0:
+         warnings.append(f"Warning: Invalid degrees of freedom ({df}), cannot perform post-hoc analysis.")
+    elif not np.isfinite(chi2):
+         warnings.append("Warning: Cannot perform post-hoc analysis because the Chi-Square statistic is undefined (NaN or Inf).")
+    elif p is None or p >= alpha:
+         # Test is not significant, residuals are exploratory
+         # Calculate them anyway but the result object will note non-significance
+         residuals = post_hoc.calculate_adjusted_residuals(observed_table, expected)
+         if residuals is not None:
+            significant_residuals = post_hoc.find_significant_residuals(
+                residuals, RESIDUAL_SIGNIFICANCE_THRESHOLD # Use standard threshold regardless of overall alpha for consistency
+            )
+         else:
+             warnings.append("Warning: Could not calculate post-hoc residuals.")
+
 
     # Create result object
     result = ContingencyTableResult(
-        test_type=test_type_hint,
-        chi2_statistic=float(chi2),
-        p_value=float(p),
-        degrees_of_freedom=df,
+        test_type=test_type_hint, # Use the hint for interpretation
+        chi2_statistic=float(chi2) if np.isfinite(chi2) else None, # Store as None if infinite/NaN
+        p_value=float(p) if np.isfinite(p) else None,
+        degrees_of_freedom=df if df is not None and df >= 0 else None, # Ensure df is valid
         observed=observed_table,
-        expected=expected,
+        expected=expected, # expected from scipy is already a numpy array
         assumption_warnings=warnings,
+        alpha=alpha, # Pass alpha to result object
         effect_size=effect_size_result,
-        residuals=residuals,
-        significant_residuals=significant_residuals
+        residuals=residuals, # numpy array or None
+        significant_residuals=significant_residuals # list of tuples
         # Interpretation is generated/extended in __post_init__
     )
+
+    # Refine interpretation if statistic/p-value are not finite
+    if result.chi2_statistic is None or result.p_value is None:
+         # Specific message if infinite Chi2 was likely the cause
+         if np.isinf(chi2):
+              result.interpretation = (
+                 f"Chi-Square calculation resulted in an infinite statistic (χ² = inf). "
+                 "This typically happens when an observed frequency is greater than 0 but the corresponding expected frequency is 0 in the contingency table. "
+                 "Check your data for structural zeros (combinations that cannot logically occur) or sparse data."
+             )
+         else:
+              result.interpretation = "Chi-Square calculation resulted in undefined values. Check inputs and assumption warnings."
+
 
     return result
