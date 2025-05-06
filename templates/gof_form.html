@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Goodness of Fit Test{% endblock %}
+
+{% block content %}
+<p>Enter observed frequencies and either expected frequencies or probabilities.</p>
+<form method="post">
+    <div>
+        <label for="observed_freqs">Observed Frequencies (comma-separated integers):</label>
+        <input type="text" id="observed_freqs" name="observed_freqs" required
+               value="{{ form_data.observed_freqs if form_data else '' }}"
+               placeholder="e.g., 50, 30, 20">
+    </div>
+
+    <p><strong>Optional:</strong> Provide one of the following:</p>
+    <div>
+        <label for="expected_freqs">Expected Frequencies (comma-separated numbers, must sum to observed total):</label>
+        <input type="text" id="expected_freqs" name="expected_freqs"
+               value="{{ form_data.expected_freqs if form_data else '' }}"
+               placeholder="e.g., 45.5, 34.1, 20.4">
+        <small>If left blank and probabilities aren't given, a uniform distribution is assumed.</small>
+    </div>
+    <div>
+        <label for="expected_probs">Expected Probabilities (comma-separated numbers, must sum to 1.0):</label>
+        <input type="text" id="expected_probs" name="expected_probs"
+               value="{{ form_data.expected_probs if form_data else '' }}"
+               placeholder="e.g., 0.5, 0.3, 0.2">
+    </div>
+
+    <button type="submit">Calculate Goodness of Fit</button>
+</form>
+{% endblock %}

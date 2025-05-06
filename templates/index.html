@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block page_title %}Chi-Square Inference Application{% endblock %}
+
+{% block content %}
+<p>Select a Chi-Square test to perform:</p>
+<ul>
+    <li><a href="{{ url_for('goodness_of_fit_view') }}">Chi-Square Goodness of Fit Test</a>: Test if observed frequencies match expected frequencies for a single categorical variable.</li>
+    <li><a href="{{ url_for('contingency_test_view') }}">Chi-Square Test for Contingency Tables</a>: Test for independence or homogeneity between two categorical variables using a contingency table.</li>
+</ul>
+{% endblock %}

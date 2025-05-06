@@ -1,0 +1,183 @@
+/* You can add the CSS from the <style> block in base.html here */
+/* Or link to a CSS framework like Bootstrap, Tailwind, etc. */
+
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    max-width: 900px; /* Slightly wider for tables */
+    margin: 30px auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+nav {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 15px;
+}
+
+nav a {
+    margin-right: 20px;
+    text-decoration: none;
+    color: #0056b3;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+    color: #003d80;
+}
+
+h1, h2, h3, h4 {
+    color: #333;
+}
+
+h1 {
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+
+/* Flash Messages - uses categories danger, warning, info, success */
+.flash {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    font-size: 0.95em;
+}
+.flash.danger { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+.flash.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+.flash.info { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+.flash.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+.flash ul { margin: 5px 0 0 20px; padding: 0;}
+.flash li { margin-bottom: 5px; }
+
+
+/* Forms */
+label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type=text],
+input[type=number], /* Consider using type=number where appropriate */
+textarea,
+select {
+    width: 98%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    box-sizing: border-box; /* Include padding in width */
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: monospace; /* Good for table-like input */
+}
+
+input[type=checkbox] {
+    margin-right: 5px;
+}
+
+button[type=submit] {
+    padding: 12px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+    font-size: 1.1em;
+    transition: background-color 0.2s ease;
+}
+
+button[type=submit]:hover {
+    background-color: #0056b3;
+}
+
+small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Results */
+.results-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.results-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #0056b3;
+}
+
+.interpretation {
+    background: #e9f5ff;
+    padding: 15px;
+    border-left: 4px solid #007bff;
+    margin-top: 10px;
+    line-height: 1.7;
+}
+
+.warnings {
+    background: #fff8e1;
+    padding: 15px;
+    border-left: 4px solid #ffc107;
+    margin-top: 10px;
+}
+.warnings strong { color: #856404; }
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    width: auto; /* Fit content */
+    max-width: 100%; /* Prevent overflow */
+    margin-top: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: right; /* Numbers usually right-aligned */
+    vertical-align: top;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-align: center; /* Headers centered */
+}
+th:first-child, td:first-child { /* Row labels */
+     text-align: left;
+     font-weight: bold;
+     background-color: #f8f9fa;
+}
+
+/* Residuals Table Specific */
+.residuals-table td.significant {
+    font-weight: bold;
+    background-color: #f8d7da !important; /* Override default td background */
+    color: #721c24;
+}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Contingency Table Test{% endblock %}
+
+{% block content %}
+<p>Enter the contingency table data. Separate columns with commas and rows with newlines or semicolons.</p>
+<form method="post">
+    <div>
+        <label for="contingency_table">Observed Frequencies Table:</label>
+        <textarea id="contingency_table" name="contingency_table" rows="5" required
+                  placeholder="e.g.,&#10;25, 15, 10&#10;30, 20, 5&#10;or&#10;25,15,10; 30,20,5">{{ form_data.contingency_table if form_data else '' }}</textarea>
+        <small>Example: A 2x3 table with rows separated by newlines.</small>
+    </div>
+    <div>
+        <label for="test_type">Test Interpretation Hint (optional):</label>
+        <select id="test_type" name="test_type">
+            <option value="Independence" {% if form_data and form_data.test_type == 'Independence' %}selected{% endif %}>Test of Independence (Association)</option>
+            <option value="Homogeneity" {% if form_data and form_data.test_type == 'Homogeneity' %}selected{% endif %}>Test of Homogeneity (Comparing Distributions)</option>
+        </select>
+    </div>
+    <div>
+        <label>
+            <input type="checkbox" name="yates_correction" value="true" {% if form_data and form_data.yates_correction %}checked{% endif %}>
+            Apply Yates' Continuity Correction (recommended only for 2x2 tables)
+        </label>
+    </div>
+
+    <button type="submit">Calculate Contingency Test</button>
+</form>
+{% endblock %}
